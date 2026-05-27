@@ -1,0 +1,394 @@
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg" alt="Python">
+  <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License">
+  <img src="https://img.shields.io/badge/Status-Beta-orange.svg" alt="Status">
+</p>
+
+<h1 align="center">VeriQuery</h1>
+
+<p align="center">基于多模态 Agentic RAG 与图谱增强的硬件规格书智能问答与验证系统</p>
+
+<p align="center">
+  <a href="README.md"><img src="https://img.shields.io/badge/Docs-English-blue.svg" alt="English"></a>
+</p>
+
+---
+
+## 演示
+
+<p align="center">
+  <img src="docs/demo-chat.png" alt="Chat 演示" width="45%">
+  <img src="docs/demo-erc.png" alt="ERC 演示" width="45%">
+</p>
+
+<p align="center">
+  <img src="docs/demo-pinout.png" alt="Pinout 演示" width="30%">
+  <img src="docs/demo-compare.png" alt="Compare 演示" width="30%">
+  <img src="docs/demo-circuit.png" alt="Circuit 演示" width="30%">
+</p>
+
+## 概述
+
+VeriQuery 是一个面向电子元器件规格书（Datasheet）的端到端智能问答与验证系统，基于多模态 Agentic RAG、知识图谱增强和形式化推理引擎构建。系统将静态 PDF 规格书转化为可查询的知识库，使工程师能够通过自然语言交互完成参数检索、电气兼容性验证、器件对比和参考电路定位。
+
+系统解决的核心痛点是：电子设计流程中，从异构规格书手动提取和交叉验证参数的过程繁琐且易出错。VeriQuery 通过混合检索架构、四层电气规则检查（ERC）引擎和 Z-number 增强的多准则决策框架实现了这一流程的自动化。
+
+## 核心功能
+
+| 模块 | 能力 | 技术方案 |
+|------|------|----------|
+| **智能问答** | 对规格书内容进行自然语言查询，带引用溯源 | Agentic RAG + LangGraph + 混合检索 |
+| **引脚分析** | 自动提取引脚定义并渲染 SVG 引脚图 | 知识图谱 + 正则 + LLM |
+| **ERC 检查** | 四层渐进式电气兼容性验证 | 区间运算 + JEDEC 标准 |
+| **参数对比** | 多器件评分与可靠性感知排序 | Z-number + B-SPOTIS + MEREC |
+| **电路检索** | 多模态电路图搜索 | CLIP + VLM + MaxSim |
+| **文档管理** | PDF 上传、解析、索引与生命周期管理 | PyMuPDF + Camelot + pdfplumber |
+
+## 系统架构
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         Streamlit 前端界面                              │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐    │
+│  │ 文档管理  │ │  智能问答  │ │  引脚分析  │ │ ERC 检查  │ │ 参数对比  │    │
+│  └─────┬────┘ └─────┬────┘ └─────┬────┘ └─────┬────┘ └─────┬────┘    │
+└────────┼────────────┼────────────┼────────────┼────────────┼──────────┘
+         │            │            │            │            │
+┌────────┼────────────┼────────────┼────────────┼────────────┼──────────┐
+│        ▼            ▼            ▼            ▼            ▼          │
+│                       FastAPI 后端 (REST API)                         │
+│  ┌──────────────────────────────────────────────────────────────────┐ │
+│  │                    LangGraph Agent 工作流                         │ │
+│  │  意图路由 → QA 检索 / 引脚 / ERC / 对比 / 电路                    │ │
+│  └──────────────────────────┬───────────────────────────────────────┘ │
+│                             │                                         │
+│  ┌──────────────┐  ┌───────┴───────┐  ┌──────────────┐               │
+│  │    文档处理    │  │     检索       │  │     推理      │               │
+│  │              │  │               │  │              │               │
+│  │ PDF 解析     │  │ 混合 RRF      │  │ 四层 ERC     │               │
+│  │ 表格提取     │  │ ├─ 向量检索    │  │ Z-A-FoM      │               │
+│  │ 图像索引     │  │ ├─ BM25       │  │ B-SPOTIS     │               │
+│  │ CLIP 过滤    │  │ └─ 结构化检索  │  │ CCM          │               │
+│  └──────────────┘  └───────────────┘  └──────────────┘               │
+│                             │                                         │
+│  ┌──────────────┐  ┌───────┴───────┐  ┌──────────────┐               │
+│  │    知识库     │  │     存储       │  │     核心      │               │
+│  │              │  │               │  │              │               │
+│  │ 图谱数据库   │  │ ChromaDB      │  │ LLM 客户端   │               │
+│  │ 引脚库       │  │ SQLite/FTS5   │  │ 配置管理     │               │
+│  │ 芯片导入     │  │ BM25 索引     │  │ 数据模型     │               │
+│  └──────────────┘  └───────────────┘  └──────────────┘               │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+## 核心算法
+
+### 混合检索与 RRF 融合
+
+三条异构检索路径并发执行，通过 Reciprocal Rank Fusion（Cormack et al., 2009）合并结果：
+
+```text
+score(d) = Σ_s w_s × 1/(k + rank_s(d) + 1),  k=60
+```
+
+| 路径 | 方法 | 权重 | 优势 |
+|------|------|------|------|
+| 稠密 | Sentence-Transformer + ChromaDB (HNSW) | 0.50 | 语义相似度 |
+| 稀疏 | BM25 + jieba 分词 | 0.35 | 精确关键词匹配 |
+| 结构化 | SQLite FTS5 + 表格存储 | 0.15 | 保留表格结构 |
+
+三条路径通过 `asyncio.gather` 并发执行（`return_exceptions=True`），总延迟等于 `max(T1, T2, T3)` 而非 `T1+T2+T3`。单条路径失败可容忍，其余路径仍返回结果。
+
+### 四层 ERC 引擎
+
+电气兼容性验证的渐进式检测架构：
+
+| 层级 | 检测内容 | 方法 | 参考文献 |
+|------|----------|------|----------|
+| L1 | 静态稳定性 | JEDEC 逻辑电平 + 噪声容限 | JESD8 系列 |
+| L2 | 信号完整性 | 传输线反射分析 | Bogatin, E. |
+| L3 | 拓扑冲突 | 接口协议 + 端口属性矩阵 | IEEE 1801 UPF |
+| L4 | 环境退化 | 区间运算 + Arrhenius 模型 | Moore (1966), JESD22-A108D |
+
+第 4 层使用 `Interval(lo, hi)` 原语进行不确定性传播，建模温度漂移下电气参数从精确值扩展为区间的过程。
+
+### 三层参数评分（CCM + Z-A-FoM + B-SPOTIS）
+
+| 层级 | 功能 | 方法 |
+|------|------|------|
+| CCM | 测试条件归一化 | 半导体物理线性等效转换 |
+| Z-A-FoM | 可靠性融合 | Z-number (Zadeh, 2011) + Kang 转换 |
+| B-SPOTIS | 鲁棒决策 | MEREC 客观加权 + SPOTIS (Dezert et al., 2020) |
+
+### 三阶段参数提取
+
+置信度递减的级联流水线：
+
+1. **结构化表格查询** — 直接从提取的 PDF 表格中查找（置信度：~0.93）
+2. **章节锚定正则** — 在"电气特性"章节内模式匹配（置信度：0.73–0.85）
+3. **Few-Shot LLM 验证** — 针对剩余参数的定向 LLM 提取（置信度：~0.80）
+
+每阶段仅处理前序阶段遗漏的参数（级联回退），确保高置信度结果优先保留。
+
+## 🚧 性能评估（进行中）
+
+VeriQuery 的定量评估正在进行中。我们正在以下维度开展全面的基准测试，详细实验结果将在后续学术论文中发表：
+
+- **提取准确率：** 评估级联参数提取流水线相对于基线 LLM（如直接提示提取）的 F1 分数。
+- **检索鲁棒性：** 测量 RRF 混合检索策略在异构规格书 PDF 上的 Recall@K 提升效果。
+- **推理可靠性：** 验证四层 ERC 引擎在标准 JEDEC/IEEE 边界场景下的准确性。
+
+*敬请期待完整技术报告与评估数据集。*
+
+<details>
+<summary>📁 项目结构</summary>
+
+```text
+veriquery/
+├── api/                        # FastAPI 后端
+│   ├── main.py                 # 应用入口、生命周期、中间件
+│   ├── dependencies.py         # 服务容器、依赖注入
+│   ├── error_handlers.py       # 全局异常处理器
+│   └── routers/
+│       ├── chat.py             # 智能问答端点
+│       ├── circuit.py          # 电路检索端点
+│       ├── compare.py          # 器件对比端点
+│       ├── documents.py        # 文档管理端点
+│       ├── erc.py              # ERC 检查端点
+│       └── pinout.py           # 引脚分析端点
+├── agents/                     # LangGraph Agent 工作流
+│   ├── workflow_graph.py       # DAG 拓扑与意图路由
+│   ├── workflow_nodes.py       # 意图路由、检索、生成
+│   ├── comparison_node.py      # 多器件对比编排
+│   └── erc_node.py             # ERC 检查编排
+├── core/                       # 共享基础设施
+│   ├── config.py               # Pydantic Settings 单例配置
+│   ├── schema.py               # 统一数据模型（AgentState, PinInfo 等）
+│   ├── llm_client.py           # HuggingFace LLM 客户端（支持量化）
+│   ├── svg_renderer.py         # 引脚 SVG 图渲染器
+│   ├── memory_manager.py       # GPU 显存管理
+│   ├── model_manager.py        # 模型生命周期管理
+│   ├── cleanup_manager.py      # 孤立数据清理
+│   ├── sqlite_utils.py         # SQLite 健康检查与修复
+│   └── exceptions.py           # 自定义异常层级
+├── ingestion/                  # 文档处理流水线
+│   ├── document_processor.py   # PDF 解析、CLIP 过滤、表格编排
+│   └── image_indexer.py        # CLIP + VLM + MaxSim 视觉索引
+├── extraction/                 # 参数与表格提取
+│   ├── parameter_extractor.py  # 三阶段级联参数提取
+│   └── table_extractor.py      # 三层表格提取（Camelot/pdfplumber）
+├── retrieval/                  # 混合检索子系统
+│   ├── hybrid_retriever.py     # RRF 融合编排器
+│   ├── vector_store.py         # ChromaDB 稠密检索
+│   ├── bm25_store.py           # BM25 稀疏检索
+│   ├── table_store.py          # SQLite FTS5 结构化检索
+│   └── embeddings.py           # Sentence-Transformer 嵌入服务
+├── reasoning/                  # 形式化推理引擎
+│   ├── erc_engine.py           # 四层 ERC 与区间运算
+│   └── parameter_scorer.py     # CCM + Z-A-FoM + B-SPOTIS 评分
+├── knowledge/                  # 领域知识库
+│   ├── graph_db.py             # SQLite 知识图谱模式（芯片→引脚→参数）
+│   ├── graph_query.py          # 知识图谱查询引擎（3 级回退）
+│   ├── chip_importer.py        # 芯片数据导入流水线
+│   └── pinout_library.py       # 内置常用芯片引脚数据库
+├── ui/                         # Streamlit 前端
+│   ├── app.py                  # 主页面与导航卡片
+│   ├── api_client.py           # 后端 API 客户端
+│   ├── theme.py                # 学术风格 CSS 主题
+│   ├── sidebar_nav.py          # 侧边栏导航与文档选择器
+│   └── pages/
+│       ├── 1_Documents.py      # 文档管理页
+│       ├── 2_Chat.py           # 智能问答页
+│       ├── 3_Pinout.py         # 引脚分析页
+│       ├── 4_ERC.py            # ERC 检查页
+│       ├── 5_Compare.py        # 参数对比页
+│       └── 6_Circuit.py        # 电路检索页
+├── docs/                       # 截图与文档资源
+├── data/                       # 运行时数据（已 gitignore）
+├── pyproject.toml              # 项目元数据与构建配置
+├── requirements.txt            # Python 依赖
+├── .env.example                # 环境变量模板
+├── logging.yaml                # 日志配置模板（参考）
+└── start.ps1                   # Windows 启动脚本
+```
+
+</details>
+
+## 技术栈
+
+| 类别 | 技术 | 用途 |
+|------|------|------|
+| **后端框架** | FastAPI + Uvicorn | 异步 REST API，自带 OpenAPI 文档 |
+| **前端框架** | Streamlit | 多页面交互式 UI |
+| **Agent 工作流** | LangGraph | 基于 DAG 的有状态工作流编排 |
+| **LLM** | Qwen2.5（HuggingFace） | 本地推理，支持 4-bit 量化 |
+| **VLM** | Qwen2-VL（HuggingFace） | 视觉语言模型，用于电路图理解 |
+| **嵌入模型** | BGE / Qwen-Embedding（HuggingFace） | 稠密文本向量化（1024 维） |
+| **向量数据库** | ChromaDB | HNSW 近似最近邻搜索 |
+| **稀疏检索** | rank_bm25 + jieba | BM25 关键词匹配，支持中文分词 |
+| **结构化检索** | SQLite + FTS5 | 表格数据全文搜索 |
+| **PDF 处理** | PyMuPDF + pdfplumber + Camelot | 文本提取、表格提取、图像渲染 |
+| **OCR** | EasyOCR + Tesseract | 扫描文档的回退 OCR（可选） |
+| **视觉** | CLIP + PIL | 图像分类与过滤 |
+| **知识图谱** | SQLite | 芯片-引脚-参数关系存储 |
+| **配置** | Pydantic Settings | 类型安全的环境变量配置 |
+| **日志** | Python logging + RotatingFileHandler | 结构化日志与轮转 |
+
+## 快速开始
+
+### 环境要求
+
+- Python 3.10+
+- 支持 CUDA 的 GPU（推荐，最低 4GB 显存）
+- Git
+
+### 安装
+
+```bash
+git clone https://github.com/FinalSunFlower/Veriquery.git
+cd veriquery
+
+python -m venv .venv
+
+# Windows:
+.venv\Scripts\activate
+# Linux/macOS:
+source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+### 模型配置
+
+所有模型首次运行时**自动从 HuggingFace 下载**，无需手动下载。在 `.env` 中配置使用的模型：
+
+```bash
+cp .env.example .env
+```
+
+| 模型 | 配置项 | 默认值 | 显存 | 用途 |
+|------|--------|--------|------|------|
+| LLM | `LLM_MODEL` | `Qwen/Qwen2.5-1.5B` | ~2GB | 文本生成 |
+| VLM | `VLM_MODEL` | `Qwen/Qwen2-VL-2B-Instruct` | ~4GB | 电路图理解 |
+| 嵌入 | `EMBEDDING_MODEL` | `BAAI/bge-large-zh-v1.5` | ~1GB | 文本向量化 |
+| CLIP | `CLIP_MODEL` | `openai/clip-vit-base-patch32` | ~0.5GB | 图像分类 |
+
+**按 GPU 显存推荐模型：**
+
+| GPU 显存 | 推荐 LLM | 推荐 VLM |
+|----------|----------|----------|
+| 4GB | `Qwen/Qwen2.5-0.5B` | `Qwen/Qwen2-VL-2B-Instruct` |
+| 8GB | `Qwen/Qwen2.5-3B` | `Qwen/Qwen2-VL-7B-Instruct` |
+| 12GB+ | `Qwen/Qwen2.5-7B` | `Qwen/Qwen2-VL-7B-Instruct` |
+
+> **提示：** 显存有限时，可在 `.env` 中设置 `EMBEDDING_DEVICE=cpu` 和 `LLM_QUANTIZE=true`。
+
+### 启动
+
+**Windows（一键启动）：**
+
+```powershell
+.\start.ps1
+```
+
+**手动启动：**
+
+```bash
+# 终端 1：启动后端 API
+python -m api.main
+
+# 终端 2：启动前端 UI
+streamlit run ui/app.py --server.port 8501
+```
+
+**访问地址：**
+
+- 前端界面：http://localhost:8501
+- 后端 API：http://localhost:8000
+- API 文档：http://localhost:8000/docs
+- 健康检查：http://localhost:8000/health
+
+### 快速上手指南
+
+1. **上传规格书** — 进入文档管理页，上传 PDF 规格书（如 NE5532、LM358）
+2. **智能问答** — 进入问答页，输入自然语言查询，如"NE5532 供电电压范围？"
+3. **查看引脚** — 进入引脚分析页，查看自动生成的 SVG 引脚图
+4. **ERC 检查** — 选择驱动端和接收端芯片，检查电气兼容性
+5. **参数对比** — 选择多个器件进行参数对比与评分
+6. **电路检索** — 从已上传的规格书中搜索应用电路图
+
+<details>
+<summary>🔌 API 参考</summary>
+
+后端在 `/api/v1` 下提供 RESTful 端点：
+
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| `/api/v1/documents/` | GET | 列出文档 |
+| `/api/v1/documents/upload` | POST | 上传文档 |
+| `/api/v1/chat/` | POST | RAG 智能问答 |
+| `/api/v1/chat/stream` | POST | 流式问答响应 |
+| `/api/v1/pinout/` | POST | 引脚定义提取 |
+| `/api/v1/erc/check` | POST | 四层 ERC 兼容性检查 |
+| `/api/v1/compare/devices-enhanced` | POST | 多器件参数对比 |
+| `/api/v1/circuit/search` | POST | 多模态电路图搜索 |
+| `/health` | GET | 系统健康检查 |
+
+完整交互式文档可在 `/docs`（Swagger UI）和 `/redoc`（ReDoc）查看。
+
+</details>
+
+## 配置参考
+
+所有配置通过环境变量（`.env` 文件）管理，`core/config.py` 中提供合理默认值。主要配置组：
+
+| 组 | 关键变量 | 默认值 |
+|----|----------|--------|
+| **LLM** | `LLM_MODEL`, `LLM_DEVICE`, `LLM_QUANTIZE` | Qwen/Qwen2.5-1.5B, cuda, true |
+| **VLM** | `VLM_MODEL`, `VLM_QUANTIZE` | Qwen/Qwen2-VL-2B-Instruct, true |
+| **嵌入** | `EMBEDDING_MODEL`, `EMBEDDING_DIMENSION` | BAAI/bge-large-zh-v1.5, 1024 |
+| **检索** | `VECTOR_WEIGHT`, `BM25_WEIGHT`, `STRUCTURED_WEIGHT` | 0.50, 0.35, 0.15 |
+| **分块** | `CHUNK_SIZE`, `CHUNK_OVERLAP` | 800, 200 |
+| **存储** | `CHROMA_PERSIST_DIR`, `DATA_DIR` | ./data/chroma, ./data |
+
+完整可配置参数见 `.env.example`。
+
+## 设计原则
+
+- **引用溯源** — 每条事实陈述携带来源引用（文件、页码、文本片段），支持验证
+- **优雅降级** — 各子系统独立初始化，单个组件故障不会导致系统崩溃
+- **懒加载** — GPU 模型首次使用时加载，避免启动时显存压力
+- **异步并发** — 检索路径通过 `asyncio.gather` 并发执行；总延迟 = max(T1, T2, T3)
+- **单例模式** — 通过双重检查锁定实现线程安全的模型实例
+- **配置校验** — Pydantic 在启动时验证所有配置，提供清晰错误信息
+
+## 学术参考文献
+
+1. Cormack, G. V., et al. (2009). Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods. *SIGIR*.
+2. Zadeh, L. A. (2011). A note on Z-numbers. *Information Sciences*, 181(22), 2923-2932.
+3. Kang, B., et al. (2012). A method of converting Z-number to classical fuzzy number. *J. of Information and Computational Science*, 9(3), 703-709.
+4. Dezert, J., et al. (2020). The SPOTIS method for multi-criteria decision-making problems. *Information Sciences*, 517, 452-469.
+5. Keshavarz-Ghorabaee, M., et al. (2021). Determination of objective weights using MEREC. *Symmetry*, 13(4), 525.
+6. Moore, R. E. (1966). *Interval Analysis*. Prentice-Hall.
+7. Bogatin, E. *Signal and Power Integrity - Simplified*. Prentice Hall.
+8. JEDEC JESD8 系列 — 逻辑电平接口标准。
+9. JEDEC JESD22-A108D — 温度、偏置与工作寿命。
+
+## 引用
+
+如果您在研究中使用 VeriQuery，请引用：
+
+```bibtex
+@misc{veriquery2026,
+  author       = {VeriQuery Team},
+  title        = {VeriQuery: Multimodal Agentic RAG with Graph-Enhanced Knowledge Base for Hardware Datasheet Intelligent Q\&A and Verification System},
+  year         = {2026},
+  publisher    = {GitHub},
+  journal      = {GitHub repository},
+  howpublished = {\url{https://github.com/FinalSunFlower/Veriquery}}
+}
+```
+
+## 许可证
+
+本项目基于 MIT 许可证开源 — 详见 [LICENSE](LICENSE) 文件。

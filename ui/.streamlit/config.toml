@@ -1,0 +1,32 @@
+[theme]
+primaryColor = "#2563eb"
+backgroundColor = "#f8fafc"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#1e293b"
+font = "sans serif"
+
+[server]
+maxUploadSize = 200
+headless = true
+runOnSave = false
+baseUrlPath = ""
+enableXsrfProtection = false
+# 关闭文件监视器，消除后台轮询CPU开销，避免随机卡顿
+fileWatcherType = "none"
+
+[browser]
+gatherUsageStats = false
+serverAddress = "localhost"
+serverPort = 8501
+
+[runner]
+# 优先响应用户操作，加快重渲染感知速度
+fastReruns = true
+
+[client]
+# 隐藏右上角工具栏（部署/分享按钮），减少DOM渲染量
+toolbarMode = "minimal"
+showErrorDetails = false
+
+[logger]
+level = "warning"

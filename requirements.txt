@@ -1,0 +1,55 @@
+# VeriQuery Python Dependencies
+
+# ==================== Core Framework ====================
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+python-multipart>=0.0.6
+
+# ==================== Streamlit UI ====================
+streamlit>=1.30.0
+plotly>=5.18.0
+
+# ==================== LangGraph ====================
+langgraph>=0.0.30
+
+# ==================== LLM/VLM Inference ====================
+torch>=2.1.0
+transformers>=4.40.0,<5.0
+accelerate>=0.25.0
+pillow>=10.2.0
+qwen-vl-utils>=0.0.1
+
+# ==================== Embedding & Vector Store ====================
+sentence-transformers>=2.3.0
+chromadb==0.4.24
+
+# ==================== PDF Processing ====================
+pymupdf>=1.24.0
+pdfplumber>=0.10.0
+camelot-py[cv]>=0.10.1
+
+# ==================== Data Processing ====================
+pandas>=2.1.0
+numpy>=1.26.0
+
+# ==================== Chinese NLP ====================
+jieba>=0.42.1
+rank-bm25>=0.2.2
+
+# ==================== HTTP ====================
+requests>=2.31.0
+
+# ==================== Utilities ====================
+python-dotenv>=1.0.0
+
+# ==================== Optional ====================
+# For 4-bit quantization on Linux (not supported on Windows):
+# bitsandbytes>=0.41.0
+# peft>=0.10.0
+# For Tabula table extraction (requires Java JRE):
+# tabula-py>=2.8.0
+# For OCR fallback (scanned documents):
+# easyocr>=1.7.0
+# pytesseract>=0.3.10
