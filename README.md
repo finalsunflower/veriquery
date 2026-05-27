@@ -17,7 +17,7 @@
 ## Demo
 
 <p align="center">
-  <a href="https://github.com/FinalSunFlower/Veriquery/issues/2">📹 观看演示视频</a>
+  <img src="docs/demo.gif" alt="VeriQuery 演示" width="100%">
 </p>
 
 ## 🎯 Overview
@@ -47,7 +47,7 @@ Unlike general-purpose RAG systems, VeriQuery is purpose-built for the datasheet
 
 ## Core Algorithms
 
-### Three-Stage Parameter Extraction
+### ⭐ Three-Stage Parameter Extraction
 
 Cascaded pipeline with decreasing confidence:
 
@@ -57,7 +57,7 @@ Cascaded pipeline with decreasing confidence:
 
 Each stage processes only parameters missed by prior stages (cascaded fallback), ensuring high-confidence results are preserved first.
 
-### Multimodal Visual Extraction (CLIP Pre-filter + ColPali)
+### 🌟 Multimodal Visual Extraction (CLIP Pre-filter + ColPali)
 
 Circuit diagram retrieval from datasheet pages using a two-stage filtering pipeline:
 
@@ -72,7 +72,7 @@ $$MaxSim(q, d) = \sum_{i=1}^{n_q} \max_{j=1}^{n_d} \langle q_i, d_j \rangle$$
 
 This architecture avoids the information loss of single-vector global embedding — each image retains full patch-level granularity for precise schematic matching.
 
-### Hybrid Retrieval with RRF Fusion
+### ✨ Hybrid Retrieval with RRF Fusion
 
 Three heterogeneous retrieval paths execute concurrently, with results merged via Reciprocal Rank Fusion (Cormack et al., 2009):
 
@@ -86,7 +86,7 @@ $$score(d) = \sum_{s} w_s \times \frac{1}{k + rank_s(d) + 1}, \quad k=60$$
 
 All three paths execute concurrently via `asyncio.gather` with `return_exceptions=True`. Total latency equals `max(T1, T2, T3)` instead of `T1+T2+T3`. Individual path failures are tolerated — remaining paths still return results.
 
-### Four-Layer ERC Engine
+### 💫 Four-Layer ERC Engine
 
 Progressive detection architecture for electrical compatibility verification:
 
@@ -99,7 +99,7 @@ Progressive detection architecture for electrical compatibility verification:
 
 Layer 4 uses `Interval(lo, hi)` primitives for uncertainty propagation through arithmetic operations, modeling temperature drift where electrical parameters expand from crisp values to intervals.
 
-### Three-Layer Parameter Scoring (CCM + Z-A-FoM + B-SPOTIS)
+### 🌠 Three-Layer Parameter Scoring (CCM + Z-A-FoM + B-SPOTIS)
 
 | Layer | Function | Method |
 |-------|----------|--------|
@@ -107,7 +107,7 @@ Layer 4 uses `Interval(lo, hi)` primitives for uncertainty propagation through a
 | Z-A-FoM | Reliability fusion | Z-number (Zadeh, 2011) + Kang conversion |
 | B-SPOTIS | Robust decision | MEREC objective weighting + SPOTIS (Dezert et al., 2020) |
 
-### Agentic RAG Workflow (LangGraph DAG)
+### ⚡ Agentic RAG Workflow (LangGraph DAG)
 
 Intent-driven orchestration layer built on LangGraph's StateGraph, routing user queries through domain-specific processing pipelines:
 
