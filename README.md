@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Status-Beta-orange.svg" alt="Status">
 </p>
 
-<h1 align="center">VeriQuery</h1>
+<h1 align="center">Veriquery</h1>
 
 <p align="center"><em>Multimodal Agentic RAG with Graph-Enhanced Knowledge Base<br>for Hardware Datasheet Intelligent Q&amp;A and Verification System</em></p>
 
@@ -17,23 +17,18 @@
 ## Demo
 
 <p align="center">
-  <img src="docs/demo-chat.png" alt="Chat Demo" width="45%">
-  <img src="docs/demo-erc.png" alt="ERC Demo" width="45%">
+  <img src="docs/demo.gif" alt="Veriquery Demo" width="100%">
 </p>
 
-<p align="center">
-  <img src="docs/demo-pinout.png" alt="Pinout Demo" width="30%">
-  <img src="docs/demo-compare.png" alt="Compare Demo" width="30%">
-  <img src="docs/demo-circuit.png" alt="Circuit Demo" width="30%">
-</p>
+## 🎯 Overview
 
-## Overview
-
-VeriQuery is an end-to-end intelligent system for electronic component datasheet analysis, built on Multimodal Agentic RAG, knowledge graph enhancement, and formal reasoning engines. It transforms static PDF datasheets into queryable knowledge, enabling engineers to retrieve parameters, verify electrical compatibility, compare devices, and locate reference circuits through natural language interaction.
+Veriquery is an end-to-end intelligent system for electronic component datasheet analysis, built on Multimodal Agentic RAG, knowledge graph enhancement, and formal reasoning engines. It transforms static PDF datasheets into queryable knowledge, enabling engineers to retrieve parameters, verify electrical compatibility, compare devices, and locate reference circuits through natural language interaction.
 
 The system addresses a critical gap in electronic design workflows: the manual, error-prone process of extracting and cross-referencing specifications from heterogeneous datasheets. VeriQuery automates this pipeline with a hybrid retrieval architecture, a four-layer Electrical Rule Check (ERC) engine, and a Z-number augmented multi-criteria decision framework.
 
-## Key Features
+Unlike general-purpose RAG systems, VeriQuery is purpose-built for the datasheet domain — every core module incorporates domain-specific design: the ERC engine encodes JEDEC logic-level standards and Arrhenius thermal degradation models; the parameter extractor uses section-anchored regex targeting "Electrical Characteristics" tables; the hybrid retriever adds a structured path (SQLite FTS5) specifically to preserve tabular data integrity; and the scoring engine normalizes test conditions via semiconductor physics (CCM) rather than generic min-max scaling.
+
+## ✨ Key Features
 
 | Module | Capability | Technology |
 |--------|-----------|------------|
@@ -44,42 +39,11 @@ The system addresses a critical gap in electronic design workflows: the manual, 
 | **Circuit Retrieval** | Multi-modal circuit diagram search from PDF pages | CLIP + VLM + MaxSim |
 | **Document Management** | PDF upload, parsing, indexing, and lifecycle management | PyMuPDF + Camelot + pdfplumber |
 
-## System Architecture
+## 🏗️ System Architecture
 
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          Streamlit Frontend                             │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐    │
-│  │ Documents │ │   Chat   │ │  Pinout  │ │   ERC    │ │ Compare  │    │
-│  └─────┬────┘ └─────┬────┘ └─────┬────┘ └─────┬────┘ └─────┬────┘    │
-└────────┼────────────┼────────────┼────────────┼────────────┼──────────┘
-         │            │            │            │            │
-┌────────┼────────────┼────────────┼────────────┼────────────┼──────────┐
-│        ▼            ▼            ▼            ▼            ▼          │
-│                        FastAPI Backend (REST API)                      │
-│  ┌──────────────────────────────────────────────────────────────────┐ │
-│  │                    LangGraph Agent Workflow                       │ │
-│  │  Intent Router → QA Retrieval / Pinout / ERC / Compare / Circuit │ │
-│  └──────────────────────────┬───────────────────────────────────────┘ │
-│                             │                                         │
-│  ┌──────────────┐  ┌───────┴───────┐  ┌──────────────┐               │
-│  │   Ingestion   │  │   Retrieval   │  │   Reasoning  │               │
-│  │              │  │               │  │              │               │
-│  │ PDF Parser   │  │ Hybrid RRF    │  │ 4-Layer ERC  │               │
-│  │ Table Extract│  │ ├─ Vector     │  │ Z-A-FoM      │               │
-│  │ Image Index  │  │ ├─ BM25       │  │ B-SPOTIS     │               │
-│  │ CLIP Filter  │  │ └─ Structured │  │ CCM          │               │
-│  └──────────────┘  └───────────────┘  └──────────────┘               │
-│                             │                                         │
-│  ┌──────────────┐  ┌───────┴───────┐  ┌──────────────┐               │
-│  │   Knowledge   │  │    Storage     │  │     Core     │               │
-│  │              │  │               │  │              │               │
-│  │ Graph DB     │  │ ChromaDB      │  │ LLM Client   │               │
-│  │ Pinout Lib   │  │ SQLite/FTS5   │  │ Config       │               │
-│  │ Chip Import  │  │ BM25 Index    │  │ Schema       │               │
-│  └──────────────┘  └───────────────┘  └──────────────┘               │
-└───────────────────────────────────────────────────────────────────────┘
-```
+<p align="center">
+  <img src="docs/Architectecture.png" alt="System Architecture" width="95%">
+</p>
 
 ## Core Algorithms
 
@@ -132,7 +96,7 @@ Each stage processes only parameters missed by prior stages (cascaded fallback),
 
 ## 🚧 Performance & Evaluation (In Progress)
 
-The quantitative evaluation of VeriQuery is currently underway. We are conducting comprehensive benchmark tests across the following dimensions, and the detailed experimental results will be published in our upcoming academic paper:
+The quantitative evaluation of Veriquery is currently underway. We are conducting comprehensive benchmark tests across the following dimensions, and the detailed experimental results will be published in our upcoming academic paper:
 
 - **Extraction Accuracy:** Evaluating the F1-score of our cascaded parameter extraction pipeline against baseline LLMs (e.g., direct prompt-based extraction).
 - **Retrieval Robustness:** Measuring the Recall@K improvements brought by the RRF hybrid retrieval strategy on heterogeneous datasheet PDFs.
@@ -214,27 +178,26 @@ veriquery/
 
 </details>
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 | Category | Technology | Purpose |
 |----------|-----------|---------|
 | **Backend Framework** | FastAPI + Uvicorn | Async REST API with OpenAPI docs |
 | **Frontend Framework** | Streamlit | Multi-page interactive UI |
 | **Agent Workflow** | LangGraph | DAG-based stateful workflow orchestration |
-| **LLM** | Qwen2.5 (HuggingFace) | Local inference with 4-bit quantization |
-| **VLM** | Qwen2-VL (HuggingFace) | Vision-language model for diagram understanding |
+| **LLM** | Qwen3.5 (HuggingFace) | Local inference with 4-bit quantization, natively multimodal |
+| **VLM** | Qwen3.5 (HuggingFace) | Natively multimodal model for diagram understanding |
 | **Embedding** | BGE / Qwen-Embedding (HuggingFace) | Dense text vectorization (1024-dim) |
 | **Vector DB** | ChromaDB | HNSW approximate nearest neighbor search |
 | **Sparse Retrieval** | rank_bm25 + jieba | BM25 keyword matching with Chinese tokenization |
 | **Structured Retrieval** | SQLite + FTS5 | Full-text search over table data |
 | **PDF Processing** | PyMuPDF + pdfplumber + Camelot | Text extraction, table extraction, image rendering |
-| **OCR** | EasyOCR + Tesseract | Fallback OCR for scanned documents (optional) |
 | **Vision** | CLIP + PIL | Image classification and filtering |
 | **Knowledge Graph** | SQLite | Chip-pin-parameter relational storage |
 | **Configuration** | Pydantic Settings | Type-safe env-based configuration |
 | **Logging** | Python logging + RotatingFileHandler | Structured logging with rotation |
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 
@@ -268,8 +231,8 @@ cp .env.example .env
 
 | Model | Config Key | Default | VRAM | Purpose |
 |-------|-----------|---------|------|---------|
-| LLM | `LLM_MODEL` | `Qwen/Qwen2.5-1.5B` | ~2GB | Text generation |
-| VLM | `VLM_MODEL` | `Qwen/Qwen2-VL-2B-Instruct` | ~4GB | Diagram understanding |
+| LLM | `LLM_MODEL` | `Qwen/Qwen3.5-0.8B` | ~1GB | Text generation (natively multimodal) |
+| VLM | `VLM_MODEL` | `Qwen/Qwen3.5-2B` | ~2GB | Diagram understanding (natively multimodal) |
 | Embedding | `EMBEDDING_MODEL` | `BAAI/bge-large-zh-v1.5` | ~1GB | Text vectorization |
 | CLIP | `CLIP_MODEL` | `openai/clip-vit-base-patch32` | ~0.5GB | Image classification |
 
@@ -277,9 +240,9 @@ cp .env.example .env
 
 | GPU VRAM | Recommended LLM | Recommended VLM |
 |----------|----------------|-----------------|
-| 4GB | `Qwen/Qwen2.5-0.5B` | `Qwen/Qwen2-VL-2B-Instruct` |
-| 8GB | `Qwen/Qwen2.5-3B` | `Qwen/Qwen2-VL-7B-Instruct` |
-| 12GB+ | `Qwen/Qwen2.5-7B` | `Qwen/Qwen2-VL-7B-Instruct` |
+| 4GB | `Qwen/Qwen3.5-0.8B` | `Qwen/Qwen3.5-0.8B` |
+| 8GB | `Qwen/Qwen3.5-2B` | `Qwen/Qwen3.5-2B` |
+| 12GB+ | `Qwen/Qwen3.5-4B` | `Qwen/Qwen3.5-4B` |
 
 > **Tip:** If you have limited VRAM, set `EMBEDDING_DEVICE=cpu` and `LLM_QUANTIZE=true` in `.env`.
 
@@ -338,14 +301,14 @@ Full interactive documentation is available at `/docs` (Swagger UI) and `/redoc`
 
 </details>
 
-## Configuration Reference
+## 🔧 Configuration Reference
 
 All configuration is managed through environment variables (`.env` file), with sensible defaults in `core/config.py`. Key configuration groups:
 
 | Group | Key Variables | Default |
 |-------|--------------|---------|
-| **LLM** | `LLM_MODEL`, `LLM_DEVICE`, `LLM_QUANTIZE` | Qwen/Qwen2.5-1.5B, cuda, true |
-| **VLM** | `VLM_MODEL`, `VLM_QUANTIZE` | Qwen/Qwen2-VL-2B-Instruct, true |
+| **LLM** | `LLM_MODEL`, `LLM_DEVICE`, `LLM_QUANTIZE` | Qwen/Qwen3.5-0.8B, cuda, true |
+| **VLM** | `VLM_MODEL`, `VLM_QUANTIZE` | Qwen/Qwen3.5-2B, true |
 | **Embedding** | `EMBEDDING_MODEL`, `EMBEDDING_DIMENSION` | BAAI/bge-large-zh-v1.5, 1024 |
 | **Retrieval** | `VECTOR_WEIGHT`, `BM25_WEIGHT`, `STRUCTURED_WEIGHT` | 0.50, 0.35, 0.15 |
 | **Chunking** | `CHUNK_SIZE`, `CHUNK_OVERLAP` | 800, 200 |
@@ -353,7 +316,7 @@ All configuration is managed through environment variables (`.env` file), with s
 
 See `.env.example` for the complete list of configurable parameters.
 
-## Design Principles
+## 💡 Design Principles
 
 - **Citation Tracing** — Every factual statement carries a source citation (file, page, text snippet) for verification
 - **Graceful Degradation** — Each subsystem initializes independently; single component failure does not crash the system
@@ -361,18 +324,6 @@ See `.env.example` for the complete list of configurable parameters.
 - **Async Concurrency** — Retrieval paths execute concurrently via `asyncio.gather`; total latency = max(T1, T2, T3)
 - **Singleton Pattern** — Thread-safe model instances via double-checked locking
 - **Configuration Validation** — Pydantic validates all settings at startup with clear error messages
-
-## Academic References
-
-1. Cormack, G. V., et al. (2009). Reciprocal Rank Fusion outperforms Condorcet and individual Rank Learning Methods. *SIGIR*.
-2. Zadeh, L. A. (2011). A note on Z-numbers. *Information Sciences*, 181(22), 2923-2932.
-3. Kang, B., et al. (2012). A method of converting Z-number to classical fuzzy number. *J. of Information and Computational Science*, 9(3), 703-709.
-4. Dezert, J., et al. (2020). The SPOTIS method for multi-criteria decision-making problems. *Information Sciences*, 517, 452-469.
-5. Keshavarz-Ghorabaee, M., et al. (2021). Determination of objective weights using MEREC. *Symmetry*, 13(4), 525.
-6. Moore, R. E. (1966). *Interval Analysis*. Prentice-Hall.
-7. Bogatin, E. *Signal and Power Integrity - Simplified*. Prentice Hall.
-8. JEDEC JESD8 series — Interface Standard for Logic Levels.
-9. JEDEC JESD22-A108D — Temperature, Bias and Operating Life.
 
 ## Citation
 

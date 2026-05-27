@@ -50,7 +50,7 @@ class Settings(BaseSettings):
 
     USE_HUGGINGFACE: bool = Field(default=True, description="Use HuggingFace local models")
     LLM_MODEL: str = Field(
-        default="Qwen/Qwen2.5-1.5B",
+        default="Qwen/Qwen3.5-0.8B",
         description="HuggingFace LLM model ID or local path (auto-downloaded on first run)",
     )
     LLM_DEVICE: str = Field(default="cuda", description="LLM device")
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int = Field(default=256, description="LLM max output tokens")
 
     VLM_MODEL: str = Field(
-        default="Qwen/Qwen2-VL-2B-Instruct",
+        default="Qwen/Qwen3.5-2B",
         description="Vision-language model ID or local path (auto-downloaded on first run)",
     )
     VLM_QUANTIZE: bool = Field(default=True, description="Quantize VLM")

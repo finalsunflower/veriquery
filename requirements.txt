@@ -50,6 +50,3 @@ python-dotenv>=1.0.0
 # peft>=0.10.0
 # For Tabula table extraction (requires Java JRE):
 # tabula-py>=2.8.0
-# For OCR fallback (scanned documents):
-# easyocr>=1.7.0
-# pytesseract>=0.3.10
