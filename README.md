@@ -17,7 +17,11 @@
 ## Demo
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Veriquery Demo" width="100%">
+  <img src="docs/demo.gif" alt="VeriQuery Demo" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/FinalSunFlower/Veriquery/issues/2">📹 Watch Demo Video</a>
 </p>
 
 ## 🎯 Overview

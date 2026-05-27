@@ -17,7 +17,11 @@
 ## 演示
 
 <p align="center">
-  <img src="docs/demo.gif" alt="Veriquery 演示" width="100%">
+  <img src="docs/demo.gif" alt="VeriQuery 演示" width="100%">
+</p>
+
+<p align="center">
+  <a href="https://github.com/FinalSunFlower/Veriquery/issues/2">📹 观看演示视频</a>
 </p>
 
 ## 概述
