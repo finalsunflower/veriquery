@@ -17,11 +17,7 @@
 ## Demo
 
 <p align="center">
-  <img src="docs/demo.gif" alt="VeriQuery Demo" width="100%">
-</p>
-
-<p align="center">
-  <a href="https://github.com/FinalSunFlower/Veriquery/issues/2">📹 Watch Demo Video</a>
+  <a href="https://github.com/FinalSunFlower/Veriquery/issues/2">📹 观看演示视频</a>
 </p>
 
 ## 🎯 Overview
@@ -51,13 +47,36 @@ Unlike general-purpose RAG systems, VeriQuery is purpose-built for the datasheet
 
 ## Core Algorithms
 
+### Three-Stage Parameter Extraction
+
+Cascaded pipeline with decreasing confidence:
+
+1. **Structured Table Query** — Direct lookup from extracted PDF tables (confidence: ~0.93)
+2. **Section-Anchored Regex** — Pattern matching within "Electrical Characteristics" sections (confidence: 0.73–0.85)
+3. **Few-Shot LLM Verification** — Targeted LLM extraction for remaining parameters (confidence: ~0.80)
+
+Each stage processes only parameters missed by prior stages (cascaded fallback), ensuring high-confidence results are preserved first.
+
+### Multimodal Visual Extraction (CLIP Pre-filter + ColPali)
+
+Circuit diagram retrieval from datasheet pages using a two-stage filtering pipeline:
+
+| Stage | Model | Function |
+|-------|-------|----------|
+| L1: CLIP Zero-Shot | `ViT-B/32` | Fast pre-filtering — classifies each page as circuit/non-circuit via text-image similarity, eliminating ~70% of irrelevant pages before expensive VLM inference |
+| L2: Patch Embedding | Qwen3.5-2B VLM | Deep feature extraction — splits images into patches, encodes each patch into multi-vector embeddings for fine-grained content matching |
+
+Retrieval uses **MaxSim** (ColPali late interaction): query tokens are compared against all image patch embeddings via dot-product, and the maximum score per query token is summed:
+
+$$MaxSim(q, d) = \sum_{i=1}^{n_q} \max_{j=1}^{n_d} \langle q_i, d_j \rangle$$
+
+This architecture avoids the information loss of single-vector global embedding — each image retains full patch-level granularity for precise schematic matching.
+
 ### Hybrid Retrieval with RRF Fusion
 
 Three heterogeneous retrieval paths execute concurrently, with results merged via Reciprocal Rank Fusion (Cormack et al., 2009):
 
-```text
-score(d) = Σ_s w_s × 1/(k + rank_s(d) + 1),  k=60
-```
+$$score(d) = \sum_{s} w_s \times \frac{1}{k + rank_s(d) + 1}, \quad k=60$$
 
 | Path | Method | Weight | Strength |
 |------|--------|--------|----------|
@@ -88,15 +107,20 @@ Layer 4 uses `Interval(lo, hi)` primitives for uncertainty propagation through a
 | Z-A-FoM | Reliability fusion | Z-number (Zadeh, 2011) + Kang conversion |
 | B-SPOTIS | Robust decision | MEREC objective weighting + SPOTIS (Dezert et al., 2020) |
 
-### Three-Stage Parameter Extraction
+### Agentic RAG Workflow (LangGraph DAG)
 
-Cascaded pipeline with decreasing confidence:
+Intent-driven orchestration layer built on LangGraph's StateGraph, routing user queries through domain-specific processing pipelines:
 
-1. **Structured Table Query** — Direct lookup from extracted PDF tables (confidence: ~0.93)
-2. **Section-Anchored Regex** — Pattern matching within "Electrical Characteristics" sections (confidence: 0.73–0.85)
-3. **Few-Shot LLM Verification** — Targeted LLM extraction for remaining parameters (confidence: ~0.80)
+```
+START → intent_router ─┬─ qa → text_retrieval → response_generation → END
+                       └─ pinout → pinout_node → END
+```
 
-Each stage processes only parameters missed by prior stages (cascaded fallback), ensuring high-confidence results are preserved first.
+**Design choices grounded in engineering constraints:**
+- **Regex-based intent routing** over LLM classification — zero latency, zero cost, fully interpretable; sufficient for the current 2-intent space (qa / pinout). ERC check and device comparison bypass the router entirely since their inputs are structured parameters, not free-form natural language.
+- **DAG topology guarantee** — LangGraph's acyclic graph ensures every workflow terminates; no infinite loops or stuck states.
+- **Graceful degradation** — individual node failures return fallback responses rather than crashing the pipeline.
+- **Compiled graph reuse** — the workflow is compiled once at startup (read-only, thread-safe) and invoked concurrently across sessions.
 
 ## 🚧 Performance & Evaluation (In Progress)
 
